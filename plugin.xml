@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
+        id="com.elb.eap"
+        version="0.7.0">
+
+  <name>Hello</name>
+
+  <engines>
+    <engine name="cordova" version=">=3.4.0"/>
+  </engines>
+
+  <asset src="www/hello.js" target="js/hello.js"/>
+
+  <js-module src="www/hello.js" name="hello">
+    <clobbers target="hello" />
+  </js-module>
+
+  <platform name="android">
+
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="Hello">
+        <param name="android-package" value="com.example.plugin.Hello"/>
+      </feature>
+    </config-file>
+
+    <source-file src="src/android/Hello.java" target-dir="src/com/example/plugin/"/>
+    <source-file src="src/android/BixolonPrinter.java" target-dir="src/com/example/plugin/"/>
+    <source-file src="src/android/EscapeSequence.java" target-dir="src/com/example/plugin/"/>
+    <source-file src="libs/acssmc-1.1.4.jar" target-dir="libs/"/>
+    <source-file src="libs/bixolon_printer_V2.1.7.jar" target-dir="libs/"/>
+    <source-file src="libs/libcommon_V1.1.7.jar" target-dir="libs"/>
+    <source-file src="jniLibs/arm64-v8a/libbxl_common.so" target-dir="src/main/jniLibs/arm64-v8a/"/>
+    <source-file src="jniLibs/armeabi-v7a/libbxl_common.so" target-dir="src/main/jniLibs/armeabi-v7a/"/>
+    <source-file src="jniLibs/x86/libbxl_common.so" target-dir="src/main/jniLibs/x86/"/>
+    <source-file src="jniLibs/x86_64/libbxl_common.so" target-dir="src/main/jniLibs/x86_64/"/>
+  </platform>
+
+</plugin>
