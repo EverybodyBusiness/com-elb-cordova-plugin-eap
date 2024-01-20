@@ -129,6 +129,11 @@ public class Hello extends CordovaPlugin {
     return false;
   }
 
+  private void closeNfcReader() {
+        // Close reader
+        mReader.close();
+        this.cordova.getActivity().getApplicationContext().unregisterReceiver(mReceiver);
+  }
 
   private boolean print(JSONArray data) {
     try {
@@ -764,10 +769,6 @@ public class Hello extends CordovaPlugin {
       return bufferString;
     }
 
-    private void closeNfcReader() {
-        // Close reader
-        mReader.close();
-        this.cordova.getActivity().getApplicationContext().unregisterReceiver(mReceiver);
-    }
+
   }
 }
