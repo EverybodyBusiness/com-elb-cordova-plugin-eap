@@ -128,7 +128,7 @@ public class Hello extends CordovaPlugin {
     return false;
   }
 
-  private void closeNfcReader() {
+  private boolean closeNfcReader() {
         // Close reader
         try {
            mReader.close();
@@ -466,9 +466,9 @@ public class Hello extends CordovaPlugin {
     });
     ///////////////////////////////////////////////
     // 아래부분 정리가 필요하다!
-    mPermissionIntent = PendingIntent.getBroadcast(this.cordova.getActivity().getApplicationContext(), 0, new Intent(
-            ACTION_USB_PERMISSION), 0);
+    mPermissionIntent = PendingIntent.getBroadcast(this.cordova.getActivity().getApplicationContext(), 0, new Intent(ACTION_USB_PERMISSION), 0);
     IntentFilter filter = new IntentFilter();
+
     filter.addAction(ACTION_USB_PERMISSION);
     filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
     this.cordova.getActivity().getApplicationContext().registerReceiver(mReceiver, filter);
@@ -702,8 +702,7 @@ public class Hello extends CordovaPlugin {
           }
 
 
-          controlCode = mFeatures
-                  .getControlCode(Features.FEATURE_IFD_PIN_PROPERTIES);
+          controlCode = mFeatures.getControlCode(Features.FEATURE_IFD_PIN_PROPERTIES);
 
           if (controlCode >= 0
                   && progress[0].controlCode == controlCode) {
@@ -713,8 +712,7 @@ public class Hello extends CordovaPlugin {
                     progress[0].responseLength);
           }
 
-          controlCode = mFeatures
-                  .getControlCode(Features.FEATURE_GET_TLV_PROPERTIES);
+          controlCode = mFeatures.getControlCode(Features.FEATURE_GET_TLV_PROPERTIES);
 
           if (controlCode >= 0
                   && progress[0].controlCode == controlCode) {
@@ -750,6 +748,8 @@ public class Hello extends CordovaPlugin {
             onNfcResultCallbackContext.sendPluginResult(result);
             new CloseTask().execute();
             mTransmitTask=null;
+
+            return closeNfcReader();
             // kalen plugin 응답으로 수정함.
             // returnResultToKiosk(true, "", final_response, RESULT_OK);
           }
