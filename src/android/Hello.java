@@ -749,7 +749,7 @@ public class Hello extends CordovaPlugin {
             new CloseTask().execute();
             mTransmitTask=null;
 
-            return closeNfcReader();
+            closeNfcReader();
             // kalen plugin 응답으로 수정함.
             // returnResultToKiosk(true, "", final_response, RESULT_OK);
           }
