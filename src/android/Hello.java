@@ -123,16 +123,21 @@ public class Hello extends CordovaPlugin {
       });
       return true;
     }else if(action.equals("nfcClose")){
-           closeNfcReader();
-           return true;
+           return closeNfcReader();
          }
     return false;
   }
 
   private void closeNfcReader() {
         // Close reader
-        mReader.close();
-        this.cordova.getActivity().getApplicationContext().unregisterReceiver(mReceiver);
+        try {
+           mReader.close();
+           this.cordova.getActivity().getApplicationContext().unregisterReceiver(mReceiver);
+           return true;
+        } catch(Exception ex) {
+            Log.e("closeNfcReader Err" , ex.getMessage());
+            return false;
+        }
   }
 
   private boolean print(JSONArray data) {
