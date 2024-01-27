@@ -107,14 +107,14 @@ public class Hello extends CordovaPlugin {
     }else if(action.equals("nfcRead")){
       onNfcResultCallbackContext=callbackContext;
       Log.e("kalen ","기존 task 가 존재할까? " + (mTransmitTask!=null));
-      if(mTransmitTask!=null){
-        Log.e("kalen ","기존 task 가 존재함.");
-        try {
-          mTransmitTask.cancel(true);
-        }catch(Exception ex){
-          Log.e("kalen task cancel error in nfcRead" , ex.getMessage());
-        }
-      }
+//       if(mTransmitTask!=null){
+//         Log.e("kalen ","기존 task 가 존재함.");
+//         try {
+//           mTransmitTask.cancel(true);
+//         }catch(Exception ex){
+//           Log.e("kalen task cancel error in nfcRead" , ex.getMessage());
+//         }
+//       }
       cordova.getThreadPool().execute(new Runnable() {
         @Override
         public void run() {
