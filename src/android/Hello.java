@@ -15,6 +15,8 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
@@ -40,7 +42,7 @@ public class Hello extends CordovaPlugin {
   private Reader mReader;
   private UsbManager mManager;
   private PendingIntent mPermissionIntent;
-  private TransmitTask mTransmitTask=null;
+  // private TransmitTask mTransmitTask=null;
   private static final String[] stateStrings = {"Unknown", "Absent",
           "Present", "Swallowed", "Powered", "Negotiable", "Specific"};
   private String command_with_aid = "00 A4 04 00 07 F0 01 02 03 04 05 06";
@@ -81,7 +83,7 @@ public class Hello extends CordovaPlugin {
       } catch (Exception e) {
         PluginResult result = new PluginResult(PluginResult.Status.ERROR, e.getMessage());
         onPrinterResultCallbackContext.sendPluginResult(result);
-        return false; // false 인가? true 인가?
+        return false; // false인가? true인가?
       }
     }else if(action.equals("print")){
       // Log.e("kalen ","print comes");
@@ -104,42 +106,32 @@ public class Hello extends CordovaPlugin {
         });
       }
       return true;
+    }else if(action.equals("nfcInit")){
+      // 호출하는 script에서 nfcRead 호출 없이 호출 되지 않도록 lock을 반드시 사용하기 바람.
+      synchronized (this) { // synchronized가 의도한대로 도착할까?
+        if (mReader != null) {
+          mReader.close();
+          mReader = null;
+          this.cordova.getActivity().getApplicationContext().unregisterReceiver(mReceiver);
+        }
+      }
+      PluginResult result = new PluginResult(PluginResult.Status.OK);
+      callbackContext.sendPluginResult(result);
     }else if(action.equals("nfcRead")){
       onNfcResultCallbackContext=callbackContext;
-      Log.e("kalen ","기존 task 가 존재할까? " + (mTransmitTask!=null));
-//       if(mTransmitTask!=null){
-//         Log.e("kalen ","기존 task 가 존재함.");
-//         try {
-//           mTransmitTask.cancel(true);
-//         }catch(Exception ex){
-//           Log.e("kalen task cancel error in nfcRead" , ex.getMessage());
-//         }
-//       }
+      // NfcTimeOut nfcTimeout= new NfcTimeOut(this.cordova.getActivity().getApplicationContext(),callbackContext);
+      // Handler handler = new Handler();
+      // handler.postDelayed(nfcTimeout, 30000); // 30초 후에 실행
       cordova.getThreadPool().execute(new Runnable() {
         @Override
         public void run() {
-          nfcRead();
+          nfcRead( /* nfcTimeout */);
         }
       });
       return true;
-    }else if(action.equals("nfcClose")){
-           return closeNfcReader();
-         }
+    }
     return false;
   }
-
-  private boolean closeNfcReader() {
-        // Close reader
-        try {
-           mReader.close();
-           this.cordova.getActivity().getApplicationContext().unregisterReceiver(mReceiver);
-           return true;
-        } catch(Exception ex) {
-            Log.e("closeNfcReader Err" , ex.getMessage());
-            return false;
-        }
-  }
-
   private boolean print(JSONArray data) {
     try {
       bxlPrinter.beginTransactionPrint();
@@ -314,6 +306,30 @@ public class Hello extends CordovaPlugin {
     }
   }
 
+  private  class NfcTimeOut implements Runnable {
+    Context mContext;
+    CallbackContext mCallbackContext;
+
+    NfcTimeOut(Context context,CallbackContext callbackContext ){
+      mContext=context;
+      mCallbackContext= callbackContext;
+    }
+
+    @Override
+    public void run() {
+      try{
+        Log.e("kalen ","nfcTimeout comes");
+        mReader.close();
+        mContext.unregisterReceiver(mReceiver);
+        PluginResult result = new PluginResult(PluginResult.Status.ERROR, "nfc timeout");
+        mCallbackContext.sendPluginResult(result);
+        Log.e("kalen ","nfcTimeout result sent");
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
   private class OpenTask extends AsyncTask<UsbDevice, Void, Exception> {
 
     @Override
@@ -382,23 +398,23 @@ public class Hello extends CordovaPlugin {
       String action = intent.getAction();
 
       if (ACTION_USB_PERMISSION.equals(action)) {
-
         synchronized (this) {
-
           UsbDevice device = (UsbDevice) intent
                   .getParcelableExtra(UsbManager.EXTRA_DEVICE);
-
           if (intent.getBooleanExtra(
                   UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-
             if (device != null) {
               // Open reader
-              new OpenTask().execute(device);
+              // new OpenTask().execute(device);
+
+              try {
+                mReader.open(device);
+              } catch (Exception e) {
+                mFeatures.clear();
+              }
             }
-          } else {
           }
         }
-
       } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
 
         synchronized (this) {
@@ -420,14 +436,15 @@ public class Hello extends CordovaPlugin {
             // mSlotAdapter.clear();
 
             // Close reader
-            new CloseTask().execute();
+            mReader.close();
+            // new CloseTask().execute();
           }
         }
       }
     }
   };
 
-  private boolean nfcRead(){
+  private boolean nfcRead(/*NfcTimeOut nfcTimeOut*/){
     mManager = (UsbManager) this.cordova.getActivity().getApplicationContext().getSystemService(Context.USB_SERVICE);
     // Initialize reader`
     mReader = new Reader(mManager);
@@ -460,15 +477,16 @@ public class Hello extends CordovaPlugin {
 
         if (now_present.equals(stateStrings[currState])) {
           // 명령어 전송
-          sendCommand();
+          // 소리를 끄고 맞는 값일 경우 삐소리를 내자!
+          sendCommand(/*nfcTimeOut*/);
         }
       }
     });
     ///////////////////////////////////////////////
     // 아래부분 정리가 필요하다!
-    mPermissionIntent = PendingIntent.getBroadcast(this.cordova.getActivity().getApplicationContext(), 0, new Intent(ACTION_USB_PERMISSION), 0);
+    mPermissionIntent = PendingIntent.getBroadcast(this.cordova.getActivity().getApplicationContext(), 0, new Intent(
+            ACTION_USB_PERMISSION), 0);
     IntentFilter filter = new IntentFilter();
-
     filter.addAction(ACTION_USB_PERMISSION);
     filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
     this.cordova.getActivity().getApplicationContext().registerReceiver(mReceiver, filter);
@@ -491,9 +509,8 @@ public class Hello extends CordovaPlugin {
     }
   }
 
-  private void sendCommand() {
-    // Get slot number
-//        int slotNum = mSlotSpinner.getSelectedItemPosition();
+  private void sendCommand(/*NfcTimeOut nfcTimeOut*/) {
+    Log.e("kalen","sendCommand ");
     int slotNum = 0;
     Log.d(TAG, "slotNum " + slotNum);
     Log.d(TAG, "Spinner.INVALID_POSITION " + Spinner.INVALID_POSITION);
@@ -505,10 +522,194 @@ public class Hello extends CordovaPlugin {
     params.commandString = command_with_aid;
     Log.d(TAG, "params.commandString " + params.commandString);
 
-    mTransmitTask = new TransmitTask();
-    Log.e("kalen","mTransmitTask "+ mTransmitTask.toString());
-    mTransmitTask.execute(params);
+    byte[] command = null;
+    byte[] response = null;
+    int responseLength = 0;
+    int foundIndex = 0;
+    int startIndex = 0;
+
+    do {
+      // Find carriage return
+      foundIndex = params.commandString.indexOf('\n', startIndex);
+      if (foundIndex >= 0) {
+        Log.d(TAG, "TransmitTask doInBackground findIndex: " + foundIndex);
+        command = toByteArray(params.commandString.substring(
+                startIndex, foundIndex));
+      } else {
+        Log.d(TAG, "TransmitTask doInBackground findIndex: " + foundIndex);
+        command = toByteArray(params.commandString
+                .substring(startIndex));
+      }
+      // Set next start index
+      startIndex = foundIndex + 1;
+      Log.d(TAG, "TransmitTask doInBackground startIndex: " + startIndex);
+      response = new byte[300];
+      try {
+
+        if (params.controlCode < 0) {
+          responseLength = mReader.transmit(params.slotNum,
+                  command, command.length, response,
+                  response.length);
+
+        } else {
+          responseLength = mReader.control(params.slotNum,
+                  params.controlCode, command, command.length,
+                  response, response.length);
+        }
+        Log.d(TAG, "TransmitTask doInBackground end try: ");
+        String final_command = toHexStringWithLength(command, command.length);
+        String final_response = toHexStringWithLength(response, responseLength);
+        Log.d(TAG, "onProgressUpdate progress[0].command: " + final_command);
+        Log.d(TAG, "onProgressUpdate progress[0].response: " + final_response);
+        if (response != null
+                && responseLength > 0) {
+          int controlCode = 0;
+          int i;
+
+          // Show control codes for IOCTL_GET_FEATURE_REQUEST
+          if (controlCode == Reader.IOCTL_GET_FEATURE_REQUEST) {
+            mFeatures.fromByteArray(response, responseLength);
+
+            for (i = Features.FEATURE_VERIFY_PIN_START; i <= Features.FEATURE_CCID_ESC_COMMAND; i++) {
+              controlCode = mFeatures.getControlCode(i);
+              if (controlCode >= 0) {
+              }
+            }
+          }
+
+          controlCode = mFeatures
+                  .getControlCode(Features.FEATURE_IFD_PIN_PROPERTIES);
+
+          if (controlCode >= 0
+                  && controlCode == controlCode) {
+
+            PinProperties pinProperties = new PinProperties(
+                    response,
+                    responseLength);
+          }
+
+          controlCode = mFeatures
+                  .getControlCode(Features.FEATURE_GET_TLV_PROPERTIES);
+
+          if (controlCode >= 0
+                  && controlCode == controlCode) {
+
+            TlvProperties readerProperties = new TlvProperties(
+                    response,
+                    responseLength);
+
+            Object property;
+            for (i = TlvProperties.PROPERTY_wLcdLayout; i <= TlvProperties.PROPERTY_wIdProduct; i++) {
+
+              property = readerProperties.getProperty(i);
+              if (property instanceof Integer) {
+              } else if (property instanceof String) {
+              }
+            }
+          }
+          // 부킹통 으로 전송 하고 종료
+          Log.d("kalen", "No UI task final_response: " + final_response);
+          if (!final_response.equals("6A 82 ") && final_command.equals("00 A4 04 00 07 F0 01 02 03 04 05 06 ")) {
+            JSONObject obj = new JSONObject();
+            try {
+              obj.put("value", final_response);
+            } catch (JSONException e) {
+              e.printStackTrace();
+            }
+            PluginResult result = new PluginResult(PluginResult.Status.OK, obj);
+            onNfcResultCallbackContext.sendPluginResult(result);
+            synchronized (this) {
+              if (mReader != null) {
+                mReader.close();
+                mReader = null;
+                this.cordova.getActivity().getApplicationContext().unregisterReceiver(mReceiver);
+              }
+            }
+            // if (nfcTimeOut != null) {
+            //  Log.e("kalen","removeTimer");
+            //  Handler handler = new Handler();
+            //  handler.removeCallbacks(nfcTimeOut);
+            //}
+            // kalen plugin 응답으로 수정함.
+          }
+        }
+      } catch (Exception e) {
+      }
+    }while(foundIndex >= 0);
   }
+
+  private String toHexStringWithLength(byte[] buffer, int bufferLength) {
+
+    String bufferString = "";
+
+    for (int i = 0; i < bufferLength; i++) {
+
+      String hexChar = Integer.toHexString(buffer[i] & 0xFF);
+      if (hexChar.length() == 1) {
+        hexChar = "0" + hexChar;
+      }
+
+      bufferString += hexChar.toUpperCase() + " ";
+    }
+
+    return bufferString;
+
+  }
+
+  private byte[] toByteArray(String hexString) {
+
+    int hexStringLength = hexString.length();
+    byte[] byteArray = null;
+    int count = 0;
+    char c;
+    int i;
+
+    // Count number of hex characters
+    for (i = 0; i < hexStringLength; i++) {
+
+      c = hexString.charAt(i);
+      if (c >= '0' && c <= '9' || c >= 'A' && c <= 'F' || c >= 'a'
+              && c <= 'f') {
+        count++;
+      }
+    }
+
+    byteArray = new byte[(count + 1) / 2];
+    boolean first = true;
+    int len = 0;
+    int value;
+    for (i = 0; i < hexStringLength; i++) {
+
+      c = hexString.charAt(i);
+      if (c >= '0' && c <= '9') {
+        value = c - '0';
+      } else if (c >= 'A' && c <= 'F') {
+        value = c - 'A' + 10;
+      } else if (c >= 'a' && c <= 'f') {
+        value = c - 'a' + 10;
+      } else {
+        value = -1;
+      }
+
+      if (value >= 0) {
+
+        if (first) {
+
+          byteArray[len] = (byte) (value << 4);
+
+        } else {
+
+          byteArray[len] |= value;
+          len++;
+        }
+
+        first = !first;
+      }
+    }
+
+    return byteArray;
+  }
+
   private class TransmitParams {
 
     public int slotNum;
@@ -524,256 +725,5 @@ public class Hello extends CordovaPlugin {
     public byte[] response;
     public int responseLength;
     public Exception e;
-  }
-
-  private class TransmitTask extends
-          AsyncTask<TransmitParams, TransmitProgress, Void> {
-    private byte[] toByteArray(String hexString) {
-
-      int hexStringLength = hexString.length();
-      byte[] byteArray = null;
-      int count = 0;
-      char c;
-      int i;
-
-      // Count number of hex characters
-      for (i = 0; i < hexStringLength; i++) {
-
-        c = hexString.charAt(i);
-        if (c >= '0' && c <= '9' || c >= 'A' && c <= 'F' || c >= 'a'
-                && c <= 'f') {
-          count++;
-        }
-      }
-
-      byteArray = new byte[(count + 1) / 2];
-      boolean first = true;
-      int len = 0;
-      int value;
-      for (i = 0; i < hexStringLength; i++) {
-
-        c = hexString.charAt(i);
-        if (c >= '0' && c <= '9') {
-          value = c - '0';
-        } else if (c >= 'A' && c <= 'F') {
-          value = c - 'A' + 10;
-        } else if (c >= 'a' && c <= 'f') {
-          value = c - 'a' + 10;
-        } else {
-          value = -1;
-        }
-
-        if (value >= 0) {
-
-          if (first) {
-
-            byteArray[len] = (byte) (value << 4);
-
-          } else {
-
-            byteArray[len] |= value;
-            len++;
-          }
-
-          first = !first;
-        }
-      }
-
-      return byteArray;
-    }
-
-    @Override
-    protected Void doInBackground(TransmitParams... params) {
-      Log.d(TAG, "TransmitTask doInBackground: ");
-
-      TransmitProgress progress = null;
-
-      byte[] command = null;
-      byte[] response = null;
-      int responseLength = 0;
-      int foundIndex = 0;
-      int startIndex = 0;
-
-      do {
-
-        // Find carriage return
-        foundIndex = params[0].commandString.indexOf('\n', startIndex);
-        if (foundIndex >= 0) {
-          Log.d(TAG, "TransmitTask doInBackground findIndex: " + foundIndex);
-          command = toByteArray(params[0].commandString.substring(
-                  startIndex, foundIndex));
-        } else {
-          Log.d(TAG, "TransmitTask doInBackground findIndex: " + foundIndex);
-          command = toByteArray(params[0].commandString
-                  .substring(startIndex));
-        }
-
-
-        // Set next start index
-        startIndex = foundIndex + 1;
-        Log.d(TAG, "TransmitTask doInBackground startIndex: " + startIndex);
-
-        response = new byte[300];
-        progress = new TransmitProgress();
-        progress.controlCode = params[0].controlCode;
-        try {
-
-          if (params[0].controlCode < 0) {
-
-            Log.d(TAG, "TransmitTask doInBackground Transmit APDU: " + progress.controlCode);
-            // Transmit APDU
-            responseLength = mReader.transmit(params[0].slotNum,
-                    command, command.length, response,
-                    response.length);
-
-          } else {
-
-            Log.d(TAG, "TransmitTask doInBackground Transmit control command: " + progress.controlCode);
-            // Transmit control command
-            responseLength = mReader.control(params[0].slotNum,
-                    params[0].controlCode, command, command.length,
-                    response, response.length);
-          }
-
-          progress.command = command;
-          progress.commandLength = command.length;
-          progress.response = response;
-          progress.responseLength = responseLength;
-          progress.e = null;
-
-          Log.d(TAG, "TransmitTask doInBackground end try: ");
-
-        } catch (Exception e) {
-          Log.d(TAG, "TransmitTask doInBackground catch: " + e.toString());
-
-          progress.command = null;
-          progress.commandLength = 0;
-          progress.response = null;
-          progress.responseLength = 0;
-          progress.e = e;
-        }
-
-
-        publishProgress(progress);
-
-      } while (foundIndex >= 0 && !isCancelled());
-
-      return null;
-    }
-
-    @Override
-    protected void onProgressUpdate(TransmitProgress... progress) {
-      Log.d(TAG, "TransmitTask onProgressUpdate: ");
-
-      if (progress[0].e != null) {
-        Log.d(TAG, "ERROR :" + progress[0].e);
-
-//                if (!String.valueOf(progress[0].e).contains("CCID Error: -1")) {
-//                    int RESULT_FAILED = 3;
-//                    returnResultToKiosk(false, progress[0].e.toString(), "", RESULT_FAILED);
-//                }
-        // 부킹통 으로 전송 하고 종료
-
-      } else {
-        String final_command = toHexStringWithLength(progress[0].command, progress[0].commandLength);
-        String final_response = toHexStringWithLength(progress[0].response, progress[0].responseLength);
-        Log.d(TAG, "onProgressUpdate progress[0].command: " + final_command);
-        Log.d(TAG, "onProgressUpdate progress[0].response: " + final_response);
-        if (progress[0].response != null
-                && progress[0].responseLength > 0) {
-
-          int controlCode;
-          int i;
-
-          // Show control codes for IOCTL_GET_FEATURE_REQUEST
-          if (progress[0].controlCode == Reader.IOCTL_GET_FEATURE_REQUEST) {
-
-            mFeatures.fromByteArray(progress[0].response,
-                    progress[0].responseLength);
-
-            for (i = Features.FEATURE_VERIFY_PIN_START; i <= Features.FEATURE_CCID_ESC_COMMAND; i++) {
-
-              controlCode = mFeatures.getControlCode(i);
-              if (controlCode >= 0) {
-//                                logMsg("Control Code: " + controlCode + " ("
-//                                        + featureStrings[i] + ")");
-              }
-            }
-          }
-
-
-          controlCode = mFeatures.getControlCode(Features.FEATURE_IFD_PIN_PROPERTIES);
-
-          if (controlCode >= 0
-                  && progress[0].controlCode == controlCode) {
-
-            PinProperties pinProperties = new PinProperties(
-                    progress[0].response,
-                    progress[0].responseLength);
-          }
-
-          controlCode = mFeatures.getControlCode(Features.FEATURE_GET_TLV_PROPERTIES);
-
-          if (controlCode >= 0
-                  && progress[0].controlCode == controlCode) {
-
-            TlvProperties readerProperties = new TlvProperties(
-                    progress[0].response,
-                    progress[0].responseLength);
-
-            Object property;
-//                        logMsg("TLV Properties:");
-            for (i = TlvProperties.PROPERTY_wLcdLayout; i <= TlvProperties.PROPERTY_wIdProduct; i++) {
-
-              property = readerProperties.getProperty(i);
-              if (property instanceof Integer) {
-//                                logMsg(propertyStrings[i] + ": "
-//                                        + toHexString((Integer) property));
-              } else if (property instanceof String) {
-//                                logMsg(propertyStrings[i] + ": " + property);
-              }
-            }
-          }
-
-          // 부킹통 으로 전송 하고 종료
-          Log.d(TAG, "final_response: " + final_response);
-          if (!final_response.equals("6A 82 ") && final_command.equals("00 A4 04 00 07 F0 01 02 03 04 05 06 ")) {
-            JSONObject obj=new JSONObject();
-            try {
-              obj.put("value", final_response);
-            } catch (JSONException e) {
-              e.printStackTrace();
-            }
-             PluginResult result = new PluginResult(PluginResult.Status.OK,obj);
-            onNfcResultCallbackContext.sendPluginResult(result);
-            new CloseTask().execute();
-            mTransmitTask=null;
-
-//             closeNfcReader();
-            // kalen plugin 응답으로 수정함.
-            // returnResultToKiosk(true, "", final_response, RESULT_OK);
-          }
-        }
-      }
-    }
-
-    private String toHexStringWithLength(byte[] buffer, int bufferLength) {
-
-      String bufferString = "";
-
-      for (int i = 0; i < bufferLength; i++) {
-
-        String hexChar = Integer.toHexString(buffer[i] & 0xFF);
-        if (hexChar.length() == 1) {
-          hexChar = "0" + hexChar;
-        }
-
-        bufferString += hexChar.toUpperCase() + " ";
-      }
-
-      return bufferString;
-    }
-
-
   }
 }
