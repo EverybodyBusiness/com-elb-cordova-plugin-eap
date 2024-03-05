@@ -1,24 +1,15 @@
 {
-  "name": "com-elb-cordova-plugin-eap",
-  "version": "0.1.0",
-  "description": "ELB Auth and Print cordova plugin",
-  "cordova": {
-    "id": "com-elb-cordova-plugin-eap",
-    "platforms": [
-      "android"
-    ]
+  "name": "@everybodybusiness/com-elb-cordova-plugin-eap",
+  "version": "1.1.0",
+  "description": "for nfc kiosk personal",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/EverybodyBusiness/com-elb-cordova-plugin-eap.git"
+    "url": "git+https://github.com/EverybodyBusiness/com-elb-cordova-plugin-eap.git"
   },
-  "keywords": [
-    "elb"
-  ],
   "author": "ELB",
-  "license": "Apache-2",
-  "bugs": {
-    "url": "https://github.com/EverybodyBusiness/com-elb-cordova-plugin-eap/issues"
-  },
-  "homepage": "https://github.com/EverybodyBusiness/com-elb-cordova-plugin-eap#readme"
+  "license": "ISC"
 }
