@@ -1,9 +1,9 @@
 {
-  "name": "com-elb-cordova-plugin-eap",
-  "version": "1.2.0",
+  "name": "@everybodybusiness/com-elb-cordova-plugin-eap",
+  "version": "0.1.0",
   "description": "ELB Auth and Print cordova plugin",
   "cordova": {
-    "id": "com-elb-cordova-plugin-eap",
+    "id": "@everybodybusiness/com-elb-cordova-plugin-eap",
     "platforms": [
       "android"
     ]

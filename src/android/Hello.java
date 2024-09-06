@@ -33,10 +33,10 @@ import com.acs.smartcard.Reader;
 import com.acs.smartcard.Reader.OnStateChangeListener;
 import com.acs.smartcard.TlvProperties;
 
-public class Eap extends CordovaPlugin {
+public class Hello extends CordovaPlugin {
     private CallbackContext onPrinterResultCallbackContext = null;
     private CallbackContext onNfcResultCallbackContext = null;
-    private static final String LOG_TAG = "Cordova Eap -kalen";
+    private static final String LOG_TAG = "Cordova Hello -kalen";
     private static BixolonPrinter bxlPrinter = null;
 
   private Reader mReader;
