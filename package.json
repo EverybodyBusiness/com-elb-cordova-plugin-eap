@@ -1,5 +1,5 @@
 {
-  "name": "@everybodybusiness/com-elb-cordova-plugin-eap",
+  "name": "@bookingtong/eap",
   "version": "1.2.0",
   "description": "for nfc kiosk personal",
   "main": "index.js",
