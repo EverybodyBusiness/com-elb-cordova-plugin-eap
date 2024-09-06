@@ -3,27 +3,27 @@
         id="com-elb-cordova-plugin-eap"
         version="1.2.0">
 
-  <name>Hello</name>
+  <name>Eap</name>
 
   <engines>
     <engine name="cordova" version=">=3.4.0"/>
   </engines>
 
-  <asset src="www/hello.js" target="js/hello.js"/>
+  <asset src="www/eap.js" target="js/eap.js"/>
 
-  <js-module src="www/hello.js" name="hello">
-    <clobbers target="hello" />
+  <js-module src="www/eap.js" name="eap">
+    <clobbers target="eap" />
   </js-module>
 
   <platform name="android">
 
     <config-file target="res/xml/config.xml" parent="/*">
-      <feature name="Hello">
-        <param name="android-package" value="com.example.plugin.Hello"/>
+      <feature name="Eap">
+        <param name="android-package" value="com.example.plugin.Eap"/>
       </feature>
     </config-file>
 
-    <source-file src="src/android/Hello.java" target-dir="src/com/example/plugin/"/>
+    <source-file src="src/android/Eap.java" target-dir="src/com/example/plugin/"/>
     <source-file src="src/android/BixolonPrinter.java" target-dir="src/com/example/plugin/"/>
     <source-file src="src/android/EscapeSequence.java" target-dir="src/com/example/plugin/"/>
     <source-file src="libs/acssmc-1.1.4.jar" target-dir="libs/"/>
