@@ -59,8 +59,9 @@ public class Hello extends CordovaPlugin {
 
     @Override
     public boolean execute(String action, JSONArray data, CallbackContext callbackContext) throws JSONException {
-        Log.e("kalen ", "execute action " + action.toString());
+        Log.e("kalen ", "execute action 1 " + action.toString());
         if (action.equals("printerInit")) {
+            Log.e("kalen ", "execute action 2 " + data.getString();
             this.onPrinterResultCallbackContext = callbackContext;
             try {
                 this.bxlPrinter = new BixolonPrinter(this.cordova.getActivity().getApplicationContext());
@@ -86,6 +87,8 @@ public class Hello extends CordovaPlugin {
                 return false; // false인가? true인가?
             }
         } else if (action.equals("print")) {
+            Log.e("kalen ", "execute action 3 " + data.getString();
+//             Log.e("kalen ", "execute action 2 " + action.toString());
             // Log.e("kalen ","print comes");
             this.onPrinterResultCallbackContext = callbackContext; // 여기 저기서 동시에 불러서는 안된다!
             JSONObject obj = data.getJSONObject(0);
@@ -107,6 +110,7 @@ public class Hello extends CordovaPlugin {
             }
             return true;
         } else if (action.equals("nfcInit")) {
+            Log.e("kalen ", "execute action 4 " + data.getString();
             // 호출하는 script에서 nfcRead 호출 없이 호출 되지 않도록 lock을 반드시 사용하기 바람.
             synchronized (this) { // synchronized가 의도한대로 도착할까?
                 if (mReader != null) {
@@ -118,6 +122,7 @@ public class Hello extends CordovaPlugin {
             PluginResult result = new PluginResult(PluginResult.Status.OK);
             callbackContext.sendPluginResult(result);
         } else if (action.equals("nfcRead")) {
+            Log.e("kalen ", "execute action 5 " + data.getString();
             onNfcResultCallbackContext = callbackContext;
             // NfcTimeOut nfcTimeout= new NfcTimeOut(this.cordova.getActivity().getApplicationContext(),callbackContext);
             // Handler handler = new Handler();
