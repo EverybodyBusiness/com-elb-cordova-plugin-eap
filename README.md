@@ -45,6 +45,8 @@ npm version patch는 패치 버전을 증가시킵니다. (예: 1.0.0 → 1.0.1)
 npm version minor는 마이너 버전을 증가시킵니다. (예: 1.0.0 → 1.1.0)
 npm version major는 메이저 버전을 증가시킵니다. (예: 1.0.0 → 2.0.0)
 
+git tag v1.1.1
+
 https://chatgpt.com/c/66dbb2f5-3f60-8010-aa15-dc213a6bcc2d
 git push origin --tags
 npm publish
