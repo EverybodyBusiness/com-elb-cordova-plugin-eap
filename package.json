@@ -1,5 +1,5 @@
 {
-  "name": "@bookingtong/eap2",
+  "name": "@bookingtong/eap",
   "version": "1.2.1",
   "description": "for nfc kiosk personal",
   "main": "index.js",
