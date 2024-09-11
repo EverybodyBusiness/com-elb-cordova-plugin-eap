@@ -1,6 +1,6 @@
 {
   "name": "@bookingtong/eap",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "for nfc kiosk personal",
   "main": "index.js",
   "scripts": {
